@@ -29,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-dataspace/reference-provider/internal/authprocessor"
 	"github.com/go-dataspace/reference-provider/internal/cli"
 	"github.com/go-dataspace/reference-provider/internal/fsprovider"
 	"github.com/go-dataspace/run-dsp/logging"
@@ -174,9 +175,11 @@ func (c *Command) startGRPC(ctx context.Context, wg *sync.WaitGroup, fsp *fsprov
 		grpc.Creds(tlsCredentials),
 		grpc.ChainUnaryInterceptor(
 			grpclog.UnaryServerInterceptor(interceptorLogger(logger), logOpts...),
+			authprocessor.UnaryInterceptor,
 		),
 		grpc.ChainStreamInterceptor(
 			grpclog.StreamServerInterceptor(interceptorLogger(logger), logOpts...),
+			authprocessor.StreamInterceptor,
 		),
 	)
 	providerv1.RegisterProviderServiceServer(grpcServer, fsp)
