@@ -15,8 +15,10 @@
 // Package authprocessor checks if there's an authorization header, and then processes it into a
 // path prefix and injects it into the context.
 // It will construct an auth header like "foo;bar;baz" to "foo/bar/baz", which is used as a
-// prefix to check for the files.
-// THIS IS VERY INSECURE AND NOT MEANT FOR ANYTHING BUT DEMONSTRATION PURPOSES
+// prefix to check for the files, relative to the serve root of the service.
+// We are aware this is not an actual auth method.
+// To repeat DO NOT USE THIS AS-IS IN PRODUCTION, THIS IS JUST TO DEMONSTRATE THAT THE AUTH HEADER
+// IS BEING FORWARDED BY RUN-DSP. THIS OFFERS NO SECURITY.
 package authprocessor
 
 import (
