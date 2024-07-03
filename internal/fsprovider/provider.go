@@ -30,16 +30,17 @@ import (
 	"path"
 	"strings"
 
+	"github.com/go-dataspace/reference-provider/internal/authprocessor"
 	providerv1 "github.com/go-dataspace/run-dsrpc/gen/go/provider/v1"
 	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
 	providerName        = "reference-provider"
 	providerDescription = "Reference filesystem provider for RUN-DSP."
-
-	queryPath = "1923/1/26/Mustermann/Erika"
 )
 
 // fileInfo is a small struct to keep file info together.
@@ -89,10 +90,11 @@ func New(ctx context.Context, dir string, publishRoot *url.URL) (*Server, error)
 
 // Ping sends back some basic info.
 func (s *Server) Ping(ctx context.Context, req *providerv1.PingRequest) (*providerv1.PingResponse, error) {
+	prefix := authprocessor.ExtractPrefix(ctx)
 	return &providerv1.PingResponse{
 		ProviderName:        providerName,
 		ProviderDescription: providerDescription,
-		Authenticated:       false,
+		Authenticated:       prefix != "",
 	}, nil
 }
 
@@ -101,9 +103,10 @@ func (s *Server) Ping(ctx context.Context, req *providerv1.PingRequest) (*provid
 func (s *Server) GetCatalogue(
 	ctx context.Context, req *providerv1.GetCatalogueRequest,
 ) (*providerv1.GetCatalogueResponse, error) {
+	prefix := authprocessor.ExtractPrefix(ctx)
 	matchingFiles := make([]*fileInfo, 0)
 	for _, v := range s.filesByID {
-		if strings.HasPrefix(v.FullPath, queryPath) {
+		if strings.HasPrefix(v.FullPath, prefix) {
 			matchingFiles = append(matchingFiles, v)
 		}
 	}
@@ -129,6 +132,10 @@ func (s *Server) GetDataset(
 	if !ok {
 		return nil, fmt.Errorf("dataset not found")
 	}
+	prefix := authprocessor.ExtractPrefix(ctx)
+	if !strings.HasPrefix(fi.FullPath, prefix) {
+		return nil, status.Errorf(codes.PermissionDenied, "not allowed to access dataset")
+	}
 	ds, err := fileInfoToDataset(fi)
 	if err != nil {
 		return nil, err
@@ -153,6 +160,10 @@ func (s *Server) PublishDataset(
 	fi, ok := s.filesByID[dsID]
 	if !ok {
 		return nil, fmt.Errorf("dataset not found")
+	}
+	prefix := authprocessor.ExtractPrefix(ctx)
+	if !strings.HasPrefix(fi.FullPath, prefix) {
+		return nil, status.Errorf(codes.PermissionDenied, "not allowed to access dataset")
 	}
 	token, err := generateRandomString(64)
 	if err != nil {
@@ -191,6 +202,11 @@ func (s *Server) UnpublishDataset(
 	pID, err := uuid.Parse(req.GetPublishId())
 	if err != nil {
 		return nil, fmt.Errorf("invalid publish UUID: %w", err)
+	}
+	pi := s.registry.GetByUUID(pID)
+	prefix := authprocessor.ExtractPrefix(ctx)
+	if !strings.HasPrefix(pi.File.FullPath, prefix) {
+		return nil, status.Errorf(codes.PermissionDenied, "not allowed to access dataset")
 	}
 	s.registry.Del(pID)
 	return &providerv1.UnpublishDatasetResponse{
