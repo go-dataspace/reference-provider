@@ -205,7 +205,9 @@ func (s *Server) UnpublishDataset(
 	}
 	pi := s.registry.GetByUUID(pID)
 	if pi == nil {
-		return nil, status.Errorf(codes.NotFound, "non-existent published set")
+		return &providerv1.UnpublishDatasetResponse{
+			Success: true,
+		}, nil
 	}
 	prefix := authprocessor.ExtractPrefix(ctx)
 	if !strings.HasPrefix(pi.File.FullPath, prefix) {
