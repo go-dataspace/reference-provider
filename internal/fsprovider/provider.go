@@ -204,6 +204,11 @@ func (s *Server) UnpublishDataset(
 		return nil, fmt.Errorf("invalid publish UUID: %w", err)
 	}
 	pi := s.registry.GetByUUID(pID)
+	if pi == nil {
+		return &providerv1.UnpublishDatasetResponse{
+			Success: true,
+		}, nil
+	}
 	prefix := authprocessor.ExtractPrefix(ctx)
 	if !strings.HasPrefix(pi.File.FullPath, prefix) {
 		return nil, status.Errorf(codes.PermissionDenied, "not allowed to access dataset")
