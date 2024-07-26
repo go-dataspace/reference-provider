@@ -31,7 +31,7 @@ import (
 	"strings"
 
 	"github.com/go-dataspace/reference-provider/internal/authprocessor"
-	providerv1 "github.com/go-dataspace/run-dsrpc/gen/go/provider/v1"
+	providerv1 "github.com/go-dataspace/run-dsrpc/gen/go/dsp/v1alpha1"
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
