@@ -33,7 +33,7 @@ import (
 	"github.com/go-dataspace/reference-provider/internal/cli"
 	"github.com/go-dataspace/reference-provider/internal/fsprovider"
 	"github.com/go-dataspace/run-dsp/logging"
-	providerv1 "github.com/go-dataspace/run-dsrpc/gen/go/provider/v1"
+	providerv1 "github.com/go-dataspace/run-dsrpc/gen/go/dsp/v1alpha1"
 	grpclog "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"

@@ -51,7 +51,7 @@ func UnaryInterceptor(
 		return nil, errMissingMetadata
 	}
 	ctx, err := injectPrefix(ctx, md)
-	if err != nil && info.FullMethod != "/provider.v1.ProviderService/Ping" {
+	if err != nil && info.FullMethod != "/dsp.v1alpha1.ProviderService/Ping" {
 		return nil, err
 	}
 	return handler(ctx, req)
