@@ -20,6 +20,7 @@
 package fsprovider
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -95,7 +96,34 @@ func (s *Server) Ping(ctx context.Context, req *providerv1.PingRequest) (*provid
 		ProviderName:        providerName,
 		ProviderDescription: providerDescription,
 		Authenticated:       prefix != "",
+		DataserviceUrl:      s.publishRoot.String(),
+		DataserviceId:       s.generateConsistentID(),
 	}, nil
+}
+
+// generateConsistentID generates a UUID URN based on the publishroot port and hostname.
+// We put the port first as only the first 16 bytes matter and if we're running on the same host
+// as other providers, the port will be the only change.
+func (s *Server) generateConsistentID() string {
+	// uuid generation needs 16 bytes
+	randBuf := make([]byte, 16)
+	initSeed := []byte(fmt.Sprintf("%s%s", s.publishRoot.Port(), s.publishRoot.Hostname()))
+
+	// Copy the initial seed into the buffer
+	copy(randBuf, initSeed)
+
+	// If the initial seed wasn't 16 bytes, fill it up with X's
+	if len(initSeed) < 16 {
+		copy(randBuf[len(initSeed):], "XXXXXXXXXXXXXXXXXXX")
+	}
+
+	u, err := uuid.NewRandomFromReader(bytes.NewReader(randBuf))
+	if err != nil {
+		// If this fails, return a random URN.
+		return uuid.New().URN()
+	}
+
+	return u.URN()
 }
 
 // GetCatalogue finds all the files that match the current authentication information, and
