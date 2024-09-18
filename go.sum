@@ -14,6 +14,8 @@ github.com/go-dataspace/run-dsrpc v0.0.1-alpha1 h1:5AidaX66NMAjjVGjKRm/DMEw+xEyS
 github.com/go-dataspace/run-dsrpc v0.0.1-alpha1/go.mod h1:GS4hV6keaQWCn9KTwMqNgzOdIgPnJ/+NSHSvgrsLbTE=
 github.com/go-dataspace/run-dsrpc v0.0.2-alpha1 h1:MMOqPIMZ0Qwor8EQAsLJVQsE46//8zZP0uxz6jh5LWY=
 github.com/go-dataspace/run-dsrpc v0.0.2-alpha1/go.mod h1:GS4hV6keaQWCn9KTwMqNgzOdIgPnJ/+NSHSvgrsLbTE=
+github.com/go-dataspace/run-dsrpc v0.0.3-alpha1 h1:YvzHkw7ew+A7NMxOfwD6jOQ5Ki49BvKmzDhohzyYNPQ=
+github.com/go-dataspace/run-dsrpc v0.0.3-alpha1/go.mod h1:GS4hV6keaQWCn9KTwMqNgzOdIgPnJ/+NSHSvgrsLbTE=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=

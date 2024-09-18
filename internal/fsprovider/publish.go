@@ -16,6 +16,7 @@ package fsprovider
 
 import (
 	"io"
+	"io/fs"
 	"net/http"
 	"path"
 	"strconv"
@@ -114,18 +115,12 @@ func (s *Server) serveFile(w http.ResponseWriter, fp *fileInfo) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	mtype, err := detectMIMEType(s.dir, fp)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	fh, err := s.dir.Open(fp.FullPath)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	mtype, err := mimetype.DetectReader(fh)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	fh.Close()
-	fh, err = s.dir.Open(fp.FullPath)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -139,6 +134,19 @@ func (s *Server) serveFile(w http.ResponseWriter, fp *fileInfo) {
 	if err != nil {
 		return
 	}
+}
+
+func detectMIMEType(dir fs.FS, fp *fileInfo) (*mimetype.MIME, error) {
+	fh, err := dir.Open(fp.FullPath)
+	if err != nil {
+		return nil, err
+	}
+	mimeType, err := mimetype.DetectReader(fh)
+	if err != nil {
+		return nil, err
+	}
+	fh.Close()
+	return mimeType, nil
 }
 
 func extractTokenFromRequest(req *http.Request) string {

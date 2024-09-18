@@ -32,7 +32,7 @@ import (
 	"strings"
 
 	"github.com/go-dataspace/reference-provider/internal/authprocessor"
-	providerv1 "github.com/go-dataspace/run-dsrpc/gen/go/dsp/v1alpha1"
+	providerv1alpha1 "github.com/go-dataspace/run-dsrpc/gen/go/dsp/v1alpha1"
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -53,7 +53,7 @@ type fileInfo struct {
 
 // Server implements both the ProviderService, and the publish http handler.
 type Server struct {
-	providerv1.UnimplementedProviderServiceServer
+	providerv1alpha1.UnimplementedProviderServiceServer
 
 	dir         fs.FS
 	filesByID   map[uuid.UUID]*fileInfo
@@ -90,9 +90,9 @@ func New(ctx context.Context, dir string, publishRoot *url.URL) (*Server, error)
 }
 
 // Ping sends back some basic info.
-func (s *Server) Ping(ctx context.Context, req *providerv1.PingRequest) (*providerv1.PingResponse, error) {
+func (s *Server) Ping(ctx context.Context, req *providerv1alpha1.PingRequest) (*providerv1alpha1.PingResponse, error) {
 	prefix := authprocessor.ExtractPrefix(ctx)
-	return &providerv1.PingResponse{
+	return &providerv1alpha1.PingResponse{
 		ProviderName:        providerName,
 		ProviderDescription: providerDescription,
 		Authenticated:       prefix != "",
@@ -129,8 +129,8 @@ func (s *Server) generateConsistentID() string {
 // GetCatalogue finds all the files that match the current authentication information, and
 // converts them into a list of datasets.
 func (s *Server) GetCatalogue(
-	ctx context.Context, req *providerv1.GetCatalogueRequest,
-) (*providerv1.GetCatalogueResponse, error) {
+	ctx context.Context, req *providerv1alpha1.GetCatalogueRequest,
+) (*providerv1alpha1.GetCatalogueResponse, error) {
 	prefix := authprocessor.ExtractPrefix(ctx)
 	matchingFiles := make([]*fileInfo, 0)
 	for _, v := range s.filesByID {
@@ -143,15 +143,15 @@ func (s *Server) GetCatalogue(
 	if err != nil {
 		return nil, fmt.Errorf("couldn't create catalogue: %w", err)
 	}
-	return &providerv1.GetCatalogueResponse{
+	return &providerv1alpha1.GetCatalogueResponse{
 		Datasets: catalogue,
 	}, nil
 }
 
 // GetDataset looks up a file by the given ID and returns it as a dataset.
 func (s *Server) GetDataset(
-	ctx context.Context, req *providerv1.GetDatasetRequest,
-) (*providerv1.GetDatasetResponse, error) {
+	ctx context.Context, req *providerv1alpha1.GetDatasetRequest,
+) (*providerv1alpha1.GetDatasetResponse, error) {
 	dsID, err := uuid.Parse(req.GetDatasetId())
 	if err != nil {
 		return nil, fmt.Errorf("invalid UUID: %w", err)
@@ -168,15 +168,15 @@ func (s *Server) GetDataset(
 	if err != nil {
 		return nil, err
 	}
-	return &providerv1.GetDatasetResponse{
+	return &providerv1alpha1.GetDatasetResponse{
 		Dataset: ds,
 	}, nil
 }
 
 // PublishDataset publishes a dataset, in our context that means a file.
 func (s *Server) PublishDataset(
-	ctx context.Context, req *providerv1.PublishDatasetRequest,
-) (*providerv1.PublishDatasetResponse, error) {
+	ctx context.Context, req *providerv1alpha1.PublishDatasetRequest,
+) (*providerv1alpha1.PublishDatasetResponse, error) {
 	dsID, err := uuid.Parse(req.GetDatasetId())
 	if err != nil {
 		return nil, fmt.Errorf("invalid dataset UUID: %w", err)
@@ -213,10 +213,10 @@ func (s *Server) PublishDataset(
 		panic(fmt.Sprintf("invalid URL %s: %s", s.publishRoot.String(), err))
 	}
 	u.Path = path.Join(u.Path, pf.PathIdentifier, pf.File.DirEntry.Name())
-	return &providerv1.PublishDatasetResponse{
-		PublishInfo: &providerv1.PublishInfo{
+	return &providerv1alpha1.PublishDatasetResponse{
+		PublishInfo: &providerv1alpha1.PublishInfo{
 			Url:                u.String(),
-			AuthenticationType: providerv1.AuthenticationType_AUTHENTICATION_TYPE_BEARER,
+			AuthenticationType: providerv1alpha1.AuthenticationType_AUTHENTICATION_TYPE_BEARER,
 			Username:           "",
 			Password:           pf.Token,
 		},
@@ -225,15 +225,15 @@ func (s *Server) PublishDataset(
 
 // UnpublishDataset unpublishes a dataset.
 func (s *Server) UnpublishDataset(
-	ctx context.Context, req *providerv1.UnpublishDatasetRequest,
-) (*providerv1.UnpublishDatasetResponse, error) {
+	ctx context.Context, req *providerv1alpha1.UnpublishDatasetRequest,
+) (*providerv1alpha1.UnpublishDatasetResponse, error) {
 	pID, err := uuid.Parse(req.GetPublishId())
 	if err != nil {
 		return nil, fmt.Errorf("invalid publish UUID: %w", err)
 	}
 	pi := s.registry.GetByUUID(pID)
 	if pi == nil {
-		return &providerv1.UnpublishDatasetResponse{
+		return &providerv1alpha1.UnpublishDatasetResponse{
 			Success: true,
 		}, nil
 	}
@@ -242,15 +242,15 @@ func (s *Server) UnpublishDataset(
 		return nil, status.Errorf(codes.PermissionDenied, "not allowed to access dataset")
 	}
 	s.registry.Del(pID)
-	return &providerv1.UnpublishDatasetResponse{
+	return &providerv1alpha1.UnpublishDatasetResponse{
 		Success: true,
 	}, nil
 }
 
-func makeCatalogue(fi []*fileInfo) ([]*providerv1.Dataset, error) {
-	datasets := make([]*providerv1.Dataset, len(fi))
+func makeCatalogue(dir fs.FS, fi []*fileInfo) ([]*providerv1alpha1.Dataset, error) {
+	datasets := make([]*providerv1alpha1.Dataset, len(fi))
 	for i, f := range fi {
-		ds, err := fileInfoToDataset(f)
+		ds, err := fileInfoToDataset(dir, f)
 		if err != nil {
 			return nil, err
 		}
@@ -259,16 +259,22 @@ func makeCatalogue(fi []*fileInfo) ([]*providerv1.Dataset, error) {
 	return datasets, nil
 }
 
-func fileInfoToDataset(fi *fileInfo) (*providerv1.Dataset, error) {
+func fileInfoToDataset(dir fs.FS, fi *fileInfo) (*providerv1alpha1.Dataset, error) {
 	i, err := fi.DirEntry.Info()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't get info for %s: %w", fi.DirEntry.Name(), err)
 	}
-	return &providerv1.Dataset{
+	mimeType, err := detectMIMEType(dir, fi)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't get mimetype for %s: %w", fi.DirEntry.Name(), err)
+	}
+	return &providerv1alpha1.Dataset{
 		Id:            fi.ID.String(),
 		Title:         fi.DirEntry.Name(),
 		AccessMethods: "https",
 		Modified:      timestamppb.New(i.ModTime()),
+		MediaType:     mimeType.String(),
+		ByteSize:      i.Size(),
 	}, nil
 }
 
