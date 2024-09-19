@@ -139,7 +139,7 @@ func (s *Server) GetCatalogue(
 		}
 	}
 
-	catalogue, err := makeCatalogue(matchingFiles)
+	catalogue, err := makeCatalogue(s.dir, matchingFiles)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't create catalogue: %w", err)
 	}
@@ -164,7 +164,7 @@ func (s *Server) GetDataset(
 	if !strings.HasPrefix(fi.FullPath, prefix) {
 		return nil, status.Errorf(codes.PermissionDenied, "not allowed to access dataset")
 	}
-	ds, err := fileInfoToDataset(fi)
+	ds, err := fileInfoToDataset(s.dir, fi)
 	if err != nil {
 		return nil, err
 	}
