@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.22 as builder
+FROM docker.io/library/golang:1.22 as builder
 WORKDIR /app
 COPY . ./
 RUN go mod download
@@ -21,6 +21,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-ext
 FROM scratch
 WORKDIR /app
 COPY --from=builder /app/reference-provider ./
+COPY --from=builder /app/sample/fsprovider /var/lib/
 COPY --from=alpine:latest /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 ENTRYPOINT [ "./reference-provider" ]
