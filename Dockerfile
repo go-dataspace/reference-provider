@@ -21,7 +21,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-ext
 FROM scratch
 WORKDIR /app
 COPY --from=builder /app/reference-provider ./
-COPY --from=builder /app/sample/fsprovider /var/lib/
+COPY --from=builder /app/sample/fsprovider /var/lib/run-dsp/fsprovider
 COPY --from=alpine:latest /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 ENTRYPOINT [ "./reference-provider" ]
