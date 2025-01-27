@@ -32,7 +32,7 @@ import (
 	"strings"
 
 	"github.com/go-dataspace/reference-provider/internal/authprocessor"
-	providerv1alpha1 "github.com/go-dataspace/run-dsrpc/gen/go/dsp/v1alpha1"
+	provider "github.com/go-dataspace/run-dsrpc/gen/go/dsp/v1alpha2"
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -53,7 +53,7 @@ type fileInfo struct {
 
 // Server implements both the ProviderService, and the publish http handler.
 type Server struct {
-	providerv1alpha1.UnimplementedProviderServiceServer
+	provider.UnimplementedProviderServiceServer
 
 	dir         fs.FS
 	filesByID   map[uuid.UUID]*fileInfo
@@ -61,7 +61,7 @@ type Server struct {
 	publishRoot *url.URL
 }
 
-// New creates a new provider service. dir is the root of the files, pubishRoot is the URL the
+// New creates a new provider service. dir is the root of the files, publishRoot is the URL the
 // mux is mounted under.
 func New(ctx context.Context, dir string, publishRoot *url.URL) (*Server, error) {
 	rootFS := os.DirFS(dir)
@@ -90,9 +90,9 @@ func New(ctx context.Context, dir string, publishRoot *url.URL) (*Server, error)
 }
 
 // Ping sends back some basic info.
-func (s *Server) Ping(ctx context.Context, req *providerv1alpha1.PingRequest) (*providerv1alpha1.PingResponse, error) {
+func (s *Server) Ping(ctx context.Context, req *provider.PingRequest) (*provider.PingResponse, error) {
 	prefix := authprocessor.ExtractPrefix(ctx)
-	return &providerv1alpha1.PingResponse{
+	return &provider.PingResponse{
 		ProviderName:        providerName,
 		ProviderDescription: providerDescription,
 		Authenticated:       prefix != "",
@@ -129,8 +129,8 @@ func (s *Server) generateConsistentID() string {
 // GetCatalogue finds all the files that match the current authentication information, and
 // converts them into a list of datasets.
 func (s *Server) GetCatalogue(
-	ctx context.Context, req *providerv1alpha1.GetCatalogueRequest,
-) (*providerv1alpha1.GetCatalogueResponse, error) {
+	ctx context.Context, req *provider.GetCatalogueRequest,
+) (*provider.GetCatalogueResponse, error) {
 	prefix := authprocessor.ExtractPrefix(ctx)
 	matchingFiles := make([]*fileInfo, 0)
 	for _, v := range s.filesByID {
@@ -143,15 +143,15 @@ func (s *Server) GetCatalogue(
 	if err != nil {
 		return nil, fmt.Errorf("couldn't create catalogue: %w", err)
 	}
-	return &providerv1alpha1.GetCatalogueResponse{
+	return &provider.GetCatalogueResponse{
 		Datasets: catalogue,
 	}, nil
 }
 
 // GetDataset looks up a file by the given ID and returns it as a dataset.
 func (s *Server) GetDataset(
-	ctx context.Context, req *providerv1alpha1.GetDatasetRequest,
-) (*providerv1alpha1.GetDatasetResponse, error) {
+	ctx context.Context, req *provider.GetDatasetRequest,
+) (*provider.GetDatasetResponse, error) {
 	dsID, err := uuid.Parse(req.GetDatasetId())
 	if err != nil {
 		return nil, fmt.Errorf("invalid UUID: %w", err)
@@ -168,15 +168,15 @@ func (s *Server) GetDataset(
 	if err != nil {
 		return nil, err
 	}
-	return &providerv1alpha1.GetDatasetResponse{
+	return &provider.GetDatasetResponse{
 		Dataset: ds,
 	}, nil
 }
 
 // PublishDataset publishes a dataset, in our context that means a file.
 func (s *Server) PublishDataset(
-	ctx context.Context, req *providerv1alpha1.PublishDatasetRequest,
-) (*providerv1alpha1.PublishDatasetResponse, error) {
+	ctx context.Context, req *provider.PublishDatasetRequest,
+) (*provider.PublishDatasetResponse, error) {
 	dsID, err := uuid.Parse(req.GetDatasetId())
 	if err != nil {
 		return nil, fmt.Errorf("invalid dataset UUID: %w", err)
@@ -213,10 +213,10 @@ func (s *Server) PublishDataset(
 		panic(fmt.Sprintf("invalid URL %s: %s", s.publishRoot.String(), err))
 	}
 	u.Path = path.Join(u.Path, pf.PathIdentifier, pf.File.DirEntry.Name())
-	return &providerv1alpha1.PublishDatasetResponse{
-		PublishInfo: &providerv1alpha1.PublishInfo{
+	return &provider.PublishDatasetResponse{
+		PublishInfo: &provider.PublishInfo{
 			Url:                u.String(),
-			AuthenticationType: providerv1alpha1.AuthenticationType_AUTHENTICATION_TYPE_BEARER,
+			AuthenticationType: provider.AuthenticationType_AUTHENTICATION_TYPE_BEARER,
 			Username:           "",
 			Password:           pf.Token,
 		},
@@ -225,15 +225,15 @@ func (s *Server) PublishDataset(
 
 // UnpublishDataset unpublishes a dataset.
 func (s *Server) UnpublishDataset(
-	ctx context.Context, req *providerv1alpha1.UnpublishDatasetRequest,
-) (*providerv1alpha1.UnpublishDatasetResponse, error) {
+	ctx context.Context, req *provider.UnpublishDatasetRequest,
+) (*provider.UnpublishDatasetResponse, error) {
 	pID, err := uuid.Parse(req.GetPublishId())
 	if err != nil {
 		return nil, fmt.Errorf("invalid publish UUID: %w", err)
 	}
 	pi := s.registry.GetByUUID(pID)
 	if pi == nil {
-		return &providerv1alpha1.UnpublishDatasetResponse{
+		return &provider.UnpublishDatasetResponse{
 			Success: true,
 		}, nil
 	}
@@ -242,13 +242,13 @@ func (s *Server) UnpublishDataset(
 		return nil, status.Errorf(codes.PermissionDenied, "not allowed to access dataset")
 	}
 	s.registry.Del(pID)
-	return &providerv1alpha1.UnpublishDatasetResponse{
+	return &provider.UnpublishDatasetResponse{
 		Success: true,
 	}, nil
 }
 
-func makeCatalogue(dir fs.FS, fi []*fileInfo) ([]*providerv1alpha1.Dataset, error) {
-	datasets := make([]*providerv1alpha1.Dataset, len(fi))
+func makeCatalogue(dir fs.FS, fi []*fileInfo) ([]*provider.Dataset, error) {
+	datasets := make([]*provider.Dataset, len(fi))
 	for i, f := range fi {
 		ds, err := fileInfoToDataset(dir, f)
 		if err != nil {
@@ -259,7 +259,7 @@ func makeCatalogue(dir fs.FS, fi []*fileInfo) ([]*providerv1alpha1.Dataset, erro
 	return datasets, nil
 }
 
-func fileInfoToDataset(dir fs.FS, fi *fileInfo) (*providerv1alpha1.Dataset, error) {
+func fileInfoToDataset(dir fs.FS, fi *fileInfo) (*provider.Dataset, error) {
 	i, err := fi.DirEntry.Info()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't get info for %s: %w", fi.DirEntry.Name(), err)
@@ -268,7 +268,7 @@ func fileInfoToDataset(dir fs.FS, fi *fileInfo) (*providerv1alpha1.Dataset, erro
 	if err != nil {
 		return nil, fmt.Errorf("couldn't get mimetype for %s: %w", fi.DirEntry.Name(), err)
 	}
-	return &providerv1alpha1.Dataset{
+	return &provider.Dataset{
 		Id:            fi.ID.String(),
 		Title:         fi.DirEntry.Name(),
 		AccessMethods: "https",
