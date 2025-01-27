@@ -14,6 +14,7 @@
                 "server",
                 "--debug",
                 "--grpc-insecure",
+                "--file-root=${workspaceFolder}/sample/fsprovider"
             ]
         }
     ]

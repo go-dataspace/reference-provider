@@ -33,7 +33,7 @@ import (
 	"github.com/go-dataspace/reference-provider/internal/cli"
 	"github.com/go-dataspace/reference-provider/internal/fsprovider"
 	"github.com/go-dataspace/run-dsp/logging"
-	providerv1 "github.com/go-dataspace/run-dsrpc/gen/go/dsp/v1alpha1"
+	provider "github.com/go-dataspace/run-dsrpc/gen/go/dsp/v1alpha2"
 	grpclog "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -182,7 +182,7 @@ func (c *Command) startGRPC(ctx context.Context, wg *sync.WaitGroup, fsp *fsprov
 			authprocessor.StreamInterceptor,
 		),
 	)
-	providerv1.RegisterProviderServiceServer(grpcServer, fsp)
+	provider.RegisterProviderServiceServer(grpcServer, fsp)
 
 	go func() {
 		logger.Info("Starting GRPC service")
